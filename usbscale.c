@@ -1,12 +1,35 @@
+// usbscale
+// =========
+//
+// C utility to read weight from a USB scale.
+//
+// Usage: usbscale
+//
+// There are no options. **usbscale** will try to read data from the first
+// scale it finds when enumerating your USB devices.
+//
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdint.h>
 #include <math.h>
 
+//
+// This program uses libusb-1.0 (not the older libusb-0.1) for USB
+// functionality.
+//
 #include <libusb-1.0/libusb.h>
+//
+// To enable a bunch of extra debugging data, simply define `#define DEBUG`
+// here and recompile.
+//
+//     #define DEBUG
+//
+// The "scales.h" file contains a listing of all the Vendor and Product codes
+// that this program will try to read. To try your scale, add your scale's
+// vendor and product codes to scales.h and recompile.
+//
 #include "scales.h"
 
-//#define DEBUG
 /*
  * These constants are from libhid/include/constants.h
  * and usage based on libhid/src/hid_exchange.c
@@ -14,8 +37,23 @@
  */
 #define WEIGH_REPORT_SIZE 0x06
 
+//
+// **find_scale** takes a libusb device list and finds the first USB device
+// that matches a device listed in scales.h.
+//
 static libusb_device* find_scale(libusb_device**);
+//
+// **print_scale_data** takes the 6-byte output from the scale and interprets
+// it, printing out the result to the screen. It also returns a 1 if the
+// program should read again (i.e. continue looping).
+//
 static int print_scale_data(char*);
+//
+// **UNITS** is an array of all the unit abbreviations as set forth by *HID
+// Point of Sale Usage Tables*, version 1.02, by the USB Implementers' Forum.
+// The list is laid out so that the unit code returned by the scale is the
+// index of its corresponding string.
+// 
 const char* UNITS[13] = {
     "units",        // unknown unit
     "mg",           // milligram
@@ -32,37 +70,72 @@ const char* UNITS[13] = {
     "lbs"           // pound
 };
 
+//
+// main
+// ----
+//
 int main(void)
 {
     libusb_device **devs;
-    int r;
+    int r; // holds return codes
     ssize_t cnt;
     libusb_device* dev;
     libusb_device_handle* handle;
 
+    //
+    // We first try to init libusb.
+    //
     r = libusb_init(NULL);
+    // 
+    // If `libusb_init` errored, then we quit immediately.
+    //
     if (r < 0)
         return r;
 
-    /*
-     * Get a list of USB devices
-     */
+    //
+    // Next, we try to get a list of USB devices on this computer.
     cnt = libusb_get_device_list(NULL, &devs);
     if (cnt < 0)
         return (int) cnt;
 
-    /*
-     * Look for a scale amongst the USB devices
-     */
+    //
+    // Once we have the list, we use **find_scale** to loop through and match
+    // every device against the scales.h list. **find_scale** will return the
+    // first device that matches, or 0 if none of them matched.
+    //
     dev = find_scale(devs);
+    if(dev == 0) {
+        fprintf(stderr, "No USB scale found on this computer.\n");
+        return -1;
+    }
     
-    /*
-     * Open a handle to this found scale
-     */
-    libusb_open(dev, &handle);
+    //
+    // Once we have a pointer to the USB scale in question, we open it.
+    //
+    r = libusb_open(dev, &handle);
+    //
+    // Note that this requires that we have permission to access this device.
+    // If you get the "permission denied" error, check your udev rules.
+    //
+    if(r < 0) {
+        if(r == LIBUSB_ERROR_ACCESS) {
+            fprintf(stderr, "Permission denied to scale.\n");
+        }
+        else if(r == LIBUSB_ERROR_NO_DEVICE) {
+            fprintf(stderr, "Scale has been disconnected.\n");
+        }
+        return -1;
+    }
+    //
+    // On Linux, we typically need to detach the kernel driver so that we can
+    // handle this USB device. We are a userspace tool, after all.
+    //
 #ifdef __linux__
     libusb_detach_kernel_driver(handle, 0);
 #endif
+    //
+    // Finally, we can claim the interface to this device and begin I/O.
+    //
     libusb_claim_interface(handle, 0);
 
 
@@ -74,12 +147,21 @@ int main(void)
      */
     unsigned char data[WEIGH_REPORT_SIZE];
     unsigned int len;
-    unsigned int res;
     int continue_reading = 0;
     int scale_result = -1;
     
+    // 
+    // We read data from the scale in an infinite loop, stopping when
+    // **print_scale_data** tells us that it's successfully gotten the weight
+    // from the scale, or if the scale or transmissions indicates an error.
+    //
     for(;;) {
-        res= libusb_interrupt_transfer(
+        //
+        // A `libusb_interrupt_transfer` of 6 bytes from the scale is the
+        // typical scale data packet, and the usage is laid out in *HID Point
+        // of Sale Usage Tables*, version 1.02.
+        //
+        r = libusb_interrupt_transfer(
             handle,
             //bmRequestType => direction: in, type: class,
                     //    recipient: interface
@@ -90,8 +172,11 @@ int main(void)
             &len,
             10000 //timeout => 10 sec
             );
-
-        if(res == 0) {
+        // 
+        // If the data transfer succeeded, then we pass along the data we
+        // received tot **print_scale_data**.
+        //
+        if(r == 0) {
 #ifdef DEBUG
             int i;
             for(i = 0; i < WEIGH_REPORT_SIZE; i++) {
@@ -109,11 +194,11 @@ int main(void)
         }
     }
     
-
-    /*
-     * Free the device handle, device list and other cleanup
-     * tasks
-     */
+    // 
+    // At the end, we make sure that we reattach the kernel driver that we
+    // detached earlier, close the handle to the device, free the device list
+    // that we retrieved, and exit libusb.
+    //
 #ifdef __linux__
     libusb_attach_kernel_driver(handle, 0);
 #endif
@@ -121,6 +206,10 @@ int main(void)
     libusb_free_device_list(devs, 1);
     libusb_exit(NULL);
 
+    // 
+    // The return code will be 0 for success or -1 for errors (see
+    // `libusb_init` above if it's neither 0 nor -1).
+    // 
     return scale_result;
 }
 
@@ -138,8 +227,17 @@ int main(void)
 //
 static int print_scale_data(char* dat) {
 
+    // 
+    // We keep around `lastStatus` so that we're not constantly printing the
+    // same status message while waiting for a weighing. If the status hasn't
+    // changed from last time, **print_scale_data** prints nothing.
+    // 
     static uint8_t lastStatus = 0;
 
+    //
+    // Gently rip apart the scale's data packet according to *HID Point of Sale
+    // Usage Tables*.
+    //
     uint8_t report = dat[0];
     uint8_t status = dat[1];
     uint8_t unit   = dat[2];
@@ -150,11 +248,19 @@ static int print_scale_data(char* dat) {
         weight = pow(weight, expt);
     }
 
+    //
+    // The scale's first byte, its "report", is always 3.
+    //
     if(report != 0x03) {
         fprintf(stderr, "Error reading scale data\n");
         return -1;
     }
 
+    //
+    // Switch on the status byte given by the scale. Note that we make a
+    // distinction between statuses that we simply wait on, and statuses that
+    // cause us to stop (`return -1`).
+    //
     switch(status) {
         case 0x01:
             fprintf(stderr, "Scale reports Fault\n");
@@ -167,6 +273,11 @@ static int print_scale_data(char* dat) {
             if(status != lastStatus)
                 fprintf(stderr, "Weighing...\n");
             break;
+        //
+        // 0x04 is the only final, successful status, and it indicates that we
+        // have a finalized weight ready to print. Here is where we make use of
+        // the `UNITS` lookup table for unit names.
+        //
         case 0x04:
             printf("%ld %s\n", weight, UNITS[unit]);
             return 0;
@@ -203,7 +314,7 @@ static libusb_device* find_scale(libusb_device **devs)
 #endif
 
     int i = 0;
-    libusb_device* dev;
+    libusb_device* dev = 0;
 
     /*
      * Loop through each usb device, and for each device, loop through the
