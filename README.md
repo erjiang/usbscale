@@ -7,7 +7,11 @@ is very simple and should work on any system with libusb-1.0 and gcc.
 Installation
 ------------
 
-You will need the development headers for **libusb-1.0**. Once you have that, you simply need to run `make` in the source directory.
+You will need the development headers for **libusb-1.0**. Once you have that,
+you simply need to run `make` in the source directory. If you get a "permission
+denied" error when running usbscale, you may need to configure **udev** on your
+system to give permission to use the scale. The file **50-usb-scale.rules**
+contains a sample udev rule file that should be placed in `/etc/udev/rules.d/`.
 
 Usage
 -----
