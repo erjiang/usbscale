@@ -13,7 +13,7 @@
 #define HID_REPORT_GET 0x01
 #define HID_RT_INPUT 0x01
 #define WEIGH_REPORT_ID 0x06 // Scale Data Report ID
-#define WEIGH_REPORT_SIZE 0x07
+#define WEIGH_REPORT_SIZE 0x06
 
 static libusb_device* find_scale(libusb_device**);
 
@@ -57,21 +57,17 @@ int main(void)
      * test_libhid.c
      */
     unsigned char data[WEIGH_REPORT_SIZE];
-    unsigned int len = libusb_control_transfer(
+    unsigned int len;
+    unsigned int res = libusb_interrupt_transfer(
         handle,
         //bmRequestType => direction: in, type: class,
                 //    recipient: interface
-        LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_CLASS |
+        LIBUSB_ENDPOINT_IN | //LIBUSB_REQUEST_TYPE_CLASS |
             LIBUSB_RECIPIENT_INTERFACE,
-        //bRequest => HID_REPORT_GET
-        // see HID1_11.pdf 60/97 (pg 51)
-        HID_REPORT_GET,
-        //wValue => hid report, no report ID
-        0x0100,
-        0x00,   //windex => interface 0
         data,
-        WEIGH_REPORT_SIZE,    //wLength
-        10000 //timeout => 1 sec
+        WEIGH_REPORT_SIZE, // length of data
+        &len,
+        10000 //timeout => 10 sec
         );
     int i;
     printf("Got %d bytes from control transfer:\n", len);
