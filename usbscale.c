@@ -104,6 +104,10 @@ int main(void)
     if (r < 0)
         return r;
 
+#ifdef DEBUG
+        libusb_set_debug(NULL, 3);
+#endif
+
     //
     // Next, we try to get a list of USB devices on this computer.
     cnt = libusb_get_device_list(NULL, &devs);
@@ -319,19 +323,25 @@ static int print_scale_data(char* dat) {
     return 1;
 }
 
+//
+// find_scale
+// ----------
+// 
+// **find_scale** takes a `libusb_device\*\*` list and loop through it,
+// matching each device's vendor and product IDs to the scales.h list. It
+// return the first matching `libusb_device\*` or 0 if no matching device is
+// found.
+//
 static libusb_device* find_scale(libusb_device **devs)
 {
-#ifdef DEBUG
-        libusb_set_debug(NULL, 3);
-#endif
 
     int i = 0;
     libusb_device* dev = 0;
 
-    /*
-     * Loop through each usb device, and for each device, loop through the
-     * scales list to see if it's one of our listed scales
-     */
+    //
+    // Loop through each USB device, and for each device, loop through the
+    // scales list to see if it's one of our listed scales.
+    //
     while ((dev = devs[i++]) != NULL) {
         struct libusb_device_descriptor desc;
         int r = libusb_get_device_descriptor(dev, &desc);
