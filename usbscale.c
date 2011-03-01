@@ -166,6 +166,21 @@ int main(void)
     int continue_reading = 0;
     int scale_result = -1;
     
+    //
+    // For some reason, we get old data the first time, so let's just get that
+    // out of the way now. It can't hurt to grab another packet from the scale.
+    //
+    r = libusb_interrupt_transfer(
+        handle,
+        //bmRequestType => direction: in, type: class,
+                //    recipient: interface
+        LIBUSB_ENDPOINT_IN | //LIBUSB_REQUEST_TYPE_CLASS |
+            LIBUSB_RECIPIENT_INTERFACE,
+        data,
+        WEIGH_REPORT_SIZE, // length of data
+        &len,
+        10000 //timeout => 10 sec
+        );
     // 
     // We read data from the scale in an infinite loop, stopping when
     // **print_scale_data** tells us that it's successfully gotten the weight
