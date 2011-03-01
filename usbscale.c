@@ -258,7 +258,7 @@ static int print_scale_data(char* dat) {
     uint8_t status = dat[1];
     uint8_t unit   = dat[2];
     uint8_t expt   = dat[3];
-    long weight = dat[4] + (dat[5] << 8);
+    double weight = (double)(dat[4] + (dat[5] << 8)) / 10;
 
     if(expt != 255 && expt != 0) {
         weight = pow(weight, expt);
@@ -295,7 +295,7 @@ static int print_scale_data(char* dat) {
         // the `UNITS` lookup table for unit names.
         //
         case 0x04:
-            printf("%ld %s\n", weight, UNITS[unit]);
+            printf("%g %s\n", weight, UNITS[unit]);
             return 0;
         case 0x05:
             if(status != lastStatus)
