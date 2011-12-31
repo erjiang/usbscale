@@ -12,13 +12,15 @@
 //
 // **scalesc** should be kept updated with the length of the list.
 //
-int scalesc = 1;
+int scalesc = 2;
 
 //
 // Scales
 // ------
 //
-uint16_t scales[1][2] = {\
+uint16_t scales[2][2] = {\
     // Stamps.com 10-lb USB scale
-    {0x1446, 0x6a73}
+    {0x1446, 0x6a73},
+    // USPS (Elane) PS311 "XM Elane Elane UParcel 30lb"
+    {0x7b7c, 0x0100}
 };
