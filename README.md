@@ -48,4 +48,8 @@ Additional licensing terms may be negotiable.
 Contact
 -------
 
-The best way to contact me is by sending mail to erjiang at indiana.edu.
+If you have a code-related issue (bugs, patches, etc.), then you can create an
+issue on the [usbscale Github repo][]. Otherwise, the best way to contact me is
+by sending mail to erjiang at indiana.edu.
+
+  [usbscale Github repo]: https://github.com/erjiang/usbscale
