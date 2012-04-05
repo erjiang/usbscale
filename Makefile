@@ -1,6 +1,6 @@
 LDLIBS=-lm -lusb-1.0
 CC=gcc
-CFLAGS=-Os
+CFLAGS=-Os -Wall
 DOCCO=docco
 
 usbscale: usbscale.c scales.h

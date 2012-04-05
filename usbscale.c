@@ -59,7 +59,7 @@ static libusb_device* find_scale(libusb_device**);
 // it, printing out the result to the screen. It also returns a 1 if the
 // program should read again (i.e. continue looping).
 //
-static int print_scale_data(char*);
+static int print_scale_data(unsigned char*);
 //
 // **UNITS** is an array of all the unit abbreviations as set forth by *HID
 // Point of Sale Usage Tables*, version 1.02, by the USB Implementers' Forum.
@@ -162,8 +162,7 @@ int main(void)
      * http://rowsandcolumns.blogspot.com/2011/02/read-from-magtek-card-swipe-reader-in.html
      */
     unsigned char data[WEIGH_REPORT_SIZE];
-    unsigned int len;
-    int continue_reading = 0;
+    int len;
     int scale_result = -1;
     
     //
@@ -256,7 +255,7 @@ int main(void)
 // the scale data indicates that some error occurred and that the program
 // should terminate.
 //
-static int print_scale_data(char* dat) {
+static int print_scale_data(unsigned char* dat) {
 
     // 
     // We keep around `lastStatus` so that we're not constantly printing the
@@ -362,7 +361,7 @@ static libusb_device* find_scale(libusb_device **devs)
         int r = libusb_get_device_descriptor(dev, &desc);
         if (r < 0) {
             fprintf(stderr, "failed to get device descriptor");
-            return;
+            return NULL;
         }
         int i;
         for (i = 0; i < scalesc; i++) {
@@ -407,5 +406,6 @@ static libusb_device* find_scale(libusb_device **devs)
             }
         }
     }
+    return NULL;
 }
 
