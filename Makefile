@@ -5,7 +5,7 @@ DOCCO=docco
 
 usbscale: usbscale.c scales.h
 
-lsscale: lsscale.c scales.h
+lsusb: lsusb.c scales.h
 
 docs: usbscale.c
 	docco usbscale.c
