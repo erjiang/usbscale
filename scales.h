@@ -10,15 +10,15 @@
 #include <stdint.h>
 
 //
-// **scalesc** should be kept updated with the length of the list.
+// **NSCALES** should be kept updated with the length of the list.
 //
-int scalesc = 3;
+#define NSCALES 3
 
 //
 // Scales
 // ------
 //
-uint16_t scales[3][2] = {\
+uint16_t scales[NSCALES][2] = {\
     // Stamps.com Model 510 5LB Scale
     {0x1446, 0x6a73},
     // USPS (Elane) PS311 "XM Elane Elane UParcel 30lb"

@@ -364,7 +364,7 @@ static libusb_device* find_scale(libusb_device **devs)
             return NULL;
         }
         int i;
-        for (i = 0; i < scalesc; i++) {
+        for (i = 0; i < NSCALES; i++) {
             if(desc.idVendor  == scales[i][0] && 
                desc.idProduct == scales[i][1]) {
                 /*
