@@ -4,6 +4,7 @@ CFLAGS=-Os -Wall
 DOCCO=docco
 
 usbscale: usbscale.c scales.h
+	$(CC) $(CFLAGS) $< $(LDLIBS) -o $@
 
 lsusb: lsusb.c scales.h
 
