@@ -94,6 +94,8 @@ int main(void)
     libusb_device* dev;
     libusb_device_handle* handle;
 
+    int weigh_count = WEIGH_COUNT -1;
+
     //
     // We first try to init libusb.
     //
@@ -213,9 +215,12 @@ int main(void)
                 printf("%x\n", data[i]);
             }
 #endif
-            scale_result = print_scale_data(data);
-            if(scale_result != 1)
-                break;
+            if (weigh_count < 1) {
+                scale_result = print_scale_data(data);
+                if(scale_result != 1)
+                   break;
+            }
+            weigh_count--;
         }
         else {
             fprintf(stderr, "Error in USB transfer\n");
@@ -275,13 +280,17 @@ static int print_scale_data(unsigned char* dat) {
     double weight = (double)(dat[4] + (dat[5] << 8)) / 10;
 
     if(expt != 255 && expt != 0) {
-        weight = pow(weight, expt);
+	if (expt > 127) {
+	    weight = weight * pow(10, expt-255);
+	} else {
+	    weight = pow(weight, expt);
+	}
     }
 
     //
     // The scale's first byte, its "report", is always 3.
     //
-    if(report != 0x03) {
+    if(report != 0x03 && report != 0x04) {
         fprintf(stderr, "Error reading scale data\n");
         return -1;
     }
@@ -364,7 +373,7 @@ static libusb_device* find_scale(libusb_device **devs)
             return NULL;
         }
         int i;
-        for (i = 0; i < scalesc; i++) {
+        for (i = 0; i < NSCALES; i++) {
             if(desc.idVendor  == scales[i][0] && 
                desc.idProduct == scales[i][1]) {
                 /*
