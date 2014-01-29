@@ -12,7 +12,7 @@
 //
 // **NSCALES** should be kept updated with the length of the list.
 //
-#define NSCALES 4
+#define NSCALES 5
 
 //
 // What is the number of the weighing result to show, as the first result may be incorrect (from the previous weighing)
@@ -31,5 +31,7 @@ uint16_t scales[NSCALES][2] = {\
     // Stamps.com Stainless Steel 5 lb. Digital Scale
     {0x2474, 0x0550},
     // Mettler Toledo
-    {0x0eb8, 0xf000}
+    {0x0eb8, 0xf000},
+    // Fairbanks Scales SCB-R9000
+    {0x0b67, 0x555e}
 };
