@@ -12,7 +12,7 @@
 //
 // **NSCALES** should be kept updated with the length of the list.
 //
-#define NSCALES 5
+#define NSCALES 6
 
 //
 // What is the number of the weighing result to show, as the first result may be incorrect (from the previous weighing)
@@ -32,6 +32,8 @@ uint16_t scales[NSCALES][2] = {\
     {0x2474, 0x0550},
     // Mettler Toledo
     {0x0eb8, 0xf000},
+    // SANFORD Dymo 10 lb USB Postal Scale
+    {0x6096, 0x0158},
     // Fairbanks Scales SCB-R9000
     {0x0b67, 0x555e}
 };
