@@ -30,6 +30,8 @@ uint16_t scales[NSCALES][2] = {\
     {0x7b7c, 0x0100},
     // Stamps.com Stainless Steel 5 lb. Digital Scale
     {0x2474, 0x0550},
+    // Stamps.com Stainless Steel 35 lb. Digital Scale
+    {0x2474, 0x3550},
     // Mettler Toledo
     {0x0eb8, 0xf000},
     // SANFORD Dymo 10 lb USB Postal Scale
