@@ -12,7 +12,7 @@
 //
 // **NSCALES** should be kept updated with the length of the list.
 //
-#define NSCALES 6
+#define NSCALES 7
 
 //
 // What is the number of the weighing result to show, as the first result may be incorrect (from the previous weighing)
