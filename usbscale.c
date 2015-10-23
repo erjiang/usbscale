@@ -276,16 +276,12 @@ static int print_scale_data(unsigned char* dat) {
     uint8_t report = dat[0];
     uint8_t status = dat[1];
     uint8_t unit   = dat[2];
-    uint8_t expt   = dat[3];
-    double weight = (double)(dat[4] + (dat[5] << 8)) / 10;
-
-    if(expt != 255 && expt != 0) {
-	if (expt > 127) {
-	    weight = weight * pow(10, expt-255);
-	} else {
-	    weight = pow(weight, expt);
-	}
-    }
+    // Accoring to the docs, scaling applied to the data as a base ten exponent
+    int8_t  expt   = dat[3];
+    // convert to machine order at all times
+    double weight = (double) le16toh(dat[5] << 8 | dat[4]);
+    // since the expt is signed, we do not need no trickery
+    weight = weight * pow(10, expt);
 
     //
     // The scale's first byte, its "report", is always 3.
