@@ -60,6 +60,12 @@ static libusb_device* find_scale(libusb_device**);
 // program should read again (i.e. continue looping).
 //
 static int print_scale_data(unsigned char*);
+
+//
+// take device and fetch bEndpointAddress for the first endpoint
+//
+uint8_t get_first_endpoint_address(libusb_device* dev);
+
 //
 // **UNITS** is an array of all the unit abbreviations as set forth by *HID
 // Point of Sale Usage Tables*, version 1.02, by the USB Implementers' Forum.
@@ -197,8 +203,7 @@ int main(void)
             handle,
             //bmRequestType => direction: in, type: class,
                     //    recipient: interface
-            LIBUSB_ENDPOINT_IN | //LIBUSB_REQUEST_TYPE_CLASS |
-                LIBUSB_RECIPIENT_INTERFACE,
+            get_first_endpoint_address(dev),
             data,
             WEIGH_REPORT_SIZE, // length of data
             &len,
@@ -414,3 +419,22 @@ static libusb_device* find_scale(libusb_device **devs)
     return NULL;
 }
 
+uint8_t get_first_endpoint_address(libusb_device* dev)
+{
+    // default value
+    uint8_t endpoint_address = LIBUSB_ENDPOINT_IN | LIBUSB_RECIPIENT_INTERFACE; //| LIBUSB_RECIPIENT_ENDPOINT;
+
+    struct libusb_config_descriptor *config;
+    int r = libusb_get_config_descriptor(dev, 0, &config);
+    if (r == 0) {
+        // assuming we have only one endpoint
+        endpoint_address = config->interface[0].altsetting[0].endpoint[0].bEndpointAddress;
+        libusb_free_config_descriptor(config);
+    }
+
+    #ifdef DEBUG
+    printf("bEndpointAddress 0x%02x\n", endpoint_address);
+    #endif
+
+    return endpoint_address;
+}

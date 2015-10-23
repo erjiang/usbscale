@@ -12,7 +12,7 @@
 //
 // **NSCALES** should be kept updated with the length of the list.
 //
-#define NSCALES 7
+#define NSCALES 8
 
 //
 // What is the number of the weighing result to show, as the first result may be incorrect (from the previous weighing)
@@ -37,5 +37,7 @@ uint16_t scales[NSCALES][2] = {\
     // SANFORD Dymo 10 lb USB Postal Scale
     {0x6096, 0x0158},
     // Fairbanks Scales SCB-R9000
-    {0x0b67, 0x555e}
+    {0x0b67, 0x555e},
+    // Dymo-CoStar Corp. M25 Digital Postal Scale
+    {0x0922, 0x8004}
 };
