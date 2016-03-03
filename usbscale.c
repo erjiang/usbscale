@@ -60,6 +60,12 @@ static libusb_device* find_scale(libusb_device**);
 // program should read again (i.e. continue looping).
 //
 static int print_scale_data(unsigned char*);
+
+//
+// take device and fetch bEndpointAddress for the first endpoint
+//
+uint8_t get_first_endpoint_address(libusb_device* dev);
+
 //
 // **UNITS** is an array of all the unit abbreviations as set forth by *HID
 // Point of Sale Usage Tables*, version 1.02, by the USB Implementers' Forum.
@@ -197,8 +203,7 @@ int main(void)
             handle,
             //bmRequestType => direction: in, type: class,
                     //    recipient: interface
-            LIBUSB_ENDPOINT_IN | //LIBUSB_REQUEST_TYPE_CLASS |
-                LIBUSB_RECIPIENT_INTERFACE,
+            get_first_endpoint_address(dev),
             data,
             WEIGH_REPORT_SIZE, // length of data
             &len,
@@ -276,16 +281,12 @@ static int print_scale_data(unsigned char* dat) {
     uint8_t report = dat[0];
     uint8_t status = dat[1];
     uint8_t unit   = dat[2];
-    uint8_t expt   = dat[3];
-    double weight = (double)(dat[4] + (dat[5] << 8)) / 10;
-
-    if(expt != 255 && expt != 0) {
-	if (expt > 127) {
-	    weight = weight * pow(10, expt-255);
-	} else {
-	    weight = pow(weight, expt);
-	}
-    }
+    // Accoring to the docs, scaling applied to the data as a base ten exponent
+    int8_t  expt   = dat[3];
+    // convert to machine order at all times
+    double weight = (double) le16toh(dat[5] << 8 | dat[4]);
+    // since the expt is signed, we do not need no trickery
+    weight = weight * pow(10, expt);
 
     //
     // The scale's first byte, its "report", is always 3.
@@ -418,3 +419,22 @@ static libusb_device* find_scale(libusb_device **devs)
     return NULL;
 }
 
+uint8_t get_first_endpoint_address(libusb_device* dev)
+{
+    // default value
+    uint8_t endpoint_address = LIBUSB_ENDPOINT_IN | LIBUSB_RECIPIENT_INTERFACE; //| LIBUSB_RECIPIENT_ENDPOINT;
+
+    struct libusb_config_descriptor *config;
+    int r = libusb_get_config_descriptor(dev, 0, &config);
+    if (r == 0) {
+        // assuming we have only one endpoint
+        endpoint_address = config->interface[0].altsetting[0].endpoint[0].bEndpointAddress;
+        libusb_free_config_descriptor(config);
+    }
+
+    #ifdef DEBUG
+    printf("bEndpointAddress 0x%02x\n", endpoint_address);
+    #endif
+
+    return endpoint_address;
+}
