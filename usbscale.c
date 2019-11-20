@@ -211,7 +211,7 @@ int main(void)
             );
         // 
         // If the data transfer succeeded, then we pass along the data we
-        // received tot **print_scale_data**.
+        // received to **print_scale_data**.
         //
         if(r == 0) {
 #ifdef DEBUG
