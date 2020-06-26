@@ -29,6 +29,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/types.h>
 #include <stdint.h>
 #include <math.h>
+#include <errno.h>
+#include <string.h>
 
 //
 // This program uses libusb-1.0 (not the older libusb-0.1) for USB
@@ -47,7 +49,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 #include "scales.h"
 
-#define WEIGH_REPORT_SIZE 0x06
+// Define the number of bytes long that each type of report is
+#define WEIGH_REPORT_SIZE 6
+#define CONTROL_REPORT_SIZE 2
 
 //
 // **find_scale** takes a libusb device list and finds the first USB device
@@ -92,7 +96,7 @@ const char* UNITS[13] = {
 // main
 // ----
 //
-int main(void)
+int main(int argc, char **argv)
 {
     libusb_device **devs;
     int r; // holds return codes
@@ -171,7 +175,28 @@ int main(void)
      */
     unsigned char data[WEIGH_REPORT_SIZE];
     int len;
+    len = 0;
     int scale_result = -1;
+
+    // lowest bit is Enforced Zero Return, second bit is Zero Scale
+    unsigned char tare_report[] = {0x02, 0x02};
+
+    if (argc > 1 && strncmp(argv[1], "zero", 5) == 0) {
+        r = libusb_interrupt_transfer(
+            handle,
+            LIBUSB_ENDPOINT_OUT + 2, // direction=host to device, type=standard, recipient=device
+            tare_report,
+            CONTROL_REPORT_SIZE,
+            &len,
+            10000
+            );
+
+        if (r != 0) {
+            fprintf(stderr, "errno=%s r=%d (%s) transferred %d bytes\n", strerror(errno), r, libusb_error_name(r), len);
+        } else {
+            fprintf(stderr, "tared\n");
+        }
+    }
     
     //
     // For some reason, we get old data the first time, so let's just get that
@@ -181,8 +206,7 @@ int main(void)
         handle,
         //bmRequestType => direction: in, type: class,
                 //    recipient: interface
-        LIBUSB_ENDPOINT_IN | //LIBUSB_REQUEST_TYPE_CLASS |
-            LIBUSB_RECIPIENT_INTERFACE,
+        LIBUSB_ENDPOINT_IN + 1,
         data,
         WEIGH_REPORT_SIZE, // length of data
         &len,
