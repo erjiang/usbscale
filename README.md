@@ -24,6 +24,13 @@ error messages will be sent to `stderr`. An exit code of 0 means that a scale
 was found and a weight was successfully read. Any other error code indicates
 that a weight reading was unavailable.
 
+## Zeroing the scale
+
+There is somewhat-experimental support for sending a tare command to the scale.
+You can invoke it by running `usbscale zero`. Not all scales seem to do the
+right thing when they receive this command, but please let us know whether your
+scale works in the GitHub issues.
+
 Adding support for more scales
 ------------------------------
 
