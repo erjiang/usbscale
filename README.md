@@ -4,6 +4,8 @@ usbscale
 **Usbscale** is a program that reads weight data from a USB scale. Compilation
 is very simple and should work on any system with libusb-1.0 and gcc.
 
+[![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O5O51UXOI)
+
 Installation
 ------------
 
