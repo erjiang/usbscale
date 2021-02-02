@@ -12,7 +12,7 @@
 //
 // **NSCALES** should be kept updated with the length of the list.
 //
-#define NSCALES 9
+#define NSCALES 10
 
 //
 // What is the number of the weighing result to show, as the first result may be incorrect (from the previous weighing)
@@ -41,5 +41,7 @@ uint16_t scales[NSCALES][2] = {\
     // Dymo-CoStar Corp. M25 Digital Postal Scale
     {0x0922, 0x8004},
     // DYMO 1772057 Digital Postal Scale
-    {0x0922, 0x8003}
+    {0x0922, 0x8003},
+    // Pitney Bowes 10lb scale 397-B (X.J. Group XJ-6K809)
+    {0x0d8f, 0x0200}
 };
