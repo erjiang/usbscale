@@ -12,7 +12,7 @@
 //
 // **NSCALES** should be kept updated with the length of the list.
 //
-#define NSCALES 10
+#define NSCALES 11
 
 //
 // What is the number of the weighing result to show, as the first result may be incorrect (from the previous weighing)
@@ -38,10 +38,12 @@ uint16_t scales[NSCALES][2] = {\
     {0x6096, 0x0158},
     // Fairbanks Scales SCB-R9000
     {0x0b67, 0x555e},
-    // Dymo-CoStar Corp. M25 Digital Postal Scale
-    {0x0922, 0x8004},
     // DYMO 1772057 Digital Postal Scale
     {0x0922, 0x8003},
+    // Dymo-CoStar Corp. M25 Digital Postal Scale
+    {0x0922, 0x8004},
+    // Dymo-CoStar Corp. S180 180kg Portable Digital Shipping Scale
+    {0x0922, 0x8009},
     // Pitney Bowes 10lb scale 397-B (X.J. Group XJ-6K809)
     {0x0d8f, 0x0200}
 };
