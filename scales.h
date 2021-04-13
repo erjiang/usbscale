@@ -12,7 +12,7 @@
 //
 // **NSCALES** should be kept updated with the length of the list.
 //
-#define NSCALES 11
+#define NSCALES 12
 
 //
 // What is the number of the weighing result to show, as the first result may be incorrect (from the previous weighing)
@@ -45,5 +45,9 @@ uint16_t scales[NSCALES][2] = {\
     // Dymo-CoStar Corp. S180 180kg Portable Digital Shipping Scale
     {0x0922, 0x8009},
     // Pitney Bowes 10lb scale 397-B (X.J. Group XJ-6K809)
-    {0x0d8f, 0x0200}
+    {0x0d8f, 0x0200},
+    // USPS DS25 25lb postage scale, Royal / X.J.GROUP
+    //   If it shows up in lsusb as 0471:0055 it won't work for some reason,
+    //   mine did at first but now it's behaving itself
+    {0x1446, 0x6a79}
 };
