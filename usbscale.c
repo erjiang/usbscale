@@ -25,6 +25,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#include <stdbool.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdint.h>
@@ -54,10 +56,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define CONTROL_REPORT_SIZE 2
 
 //
-// **find_scale** takes a libusb device list and finds the first USB device
+// **is_scale** takes a libusb device list and finds the first USB device
 // that matches a device listed in scales.h.
 //
-static libusb_device* find_scale(libusb_device**);
+static bool is_scale(libusb_device*);
 //
 // **print_scale_data** takes the 6-byte output from the scale and interprets
 // it, printing out the result to the screen. It also returns a 1 if the
@@ -103,6 +105,7 @@ int main(int argc, char **argv)
     ssize_t cnt;
     libusb_device* dev;
     libusb_device_handle* handle;
+    bool found_scale = false;
 
     int weigh_count = WEIGH_COUNT -1;
 
@@ -127,154 +130,167 @@ int main(int argc, char **argv)
         return (int) cnt;
 
     //
-    // Once we have the list, we use **find_scale** to loop through and match
-    // every device against the scales.h list. **find_scale** will return the
+    // Once we have the list, we use **is_scale** to loop through and match
+    // every device against the scales.h list. **is_scale** will return the
     // first device that matches, or 0 if none of them matched.
     //
-    dev = find_scale(devs);
-    if(dev == 0) {
-        fprintf(stderr, "No USB scale found on this computer.\n");
-        return -1;
-    }
 
-    //
-    // Once we have a pointer to the USB scale in question, we open it.
-    //
-    r = libusb_open(dev, &handle);
-    //
-    // Note that this requires that we have permission to access this device.
-    // If you get the "permission denied" error, check your udev rules.
-    //
-    if(r < 0) {
-        if(r == LIBUSB_ERROR_ACCESS) {
-            fprintf(stderr, "Permission denied to scale.\n");
+    int i = 0;
+    while ((dev = devs[i++]) != NULL) {
+        if (!is_scale(dev)) {
+            continue;
         }
-        else if(r == LIBUSB_ERROR_NO_DEVICE) {
-            fprintf(stderr, "Scale has been disconnected.\n");
-        }
-        return -1;
-    }
-    //
-    // On Linux, we typically need to detach the kernel driver so that we can
-    // handle this USB device. We are a userspace tool, after all.
-    //
-#ifdef __linux__
-    libusb_detach_kernel_driver(handle, 0);
-#endif
-    //
-    // Finally, we can claim the interface to this device and begin I/O.
-    //
-    libusb_claim_interface(handle, 0);
+        found_scale = true;
 
-
-
-    /*
-     * Try to transfer data about status
-     *
-     * http://rowsandcolumns.blogspot.com/2011/02/read-from-magtek-card-swipe-reader-in.html
-     */
-    unsigned char data[WEIGH_REPORT_SIZE];
-    int len;
-    len = 0;
-    int scale_result = -1;
-
-    // lowest bit is Enforced Zero Return, second bit is Zero Scale
-    unsigned char tare_report[] = {0x02, 0x02};
-
-    if (argc > 1 && strncmp(argv[1], "zero", 5) == 0) {
-        r = libusb_interrupt_transfer(
-            handle,
-            LIBUSB_ENDPOINT_OUT + 2, // direction=host to device, type=standard, recipient=device
-            tare_report,
-            CONTROL_REPORT_SIZE,
-            &len,
-            10000
-            );
-
-        if (r != 0) {
-            fprintf(stderr, "errno=%s r=%d (%s) transferred %d bytes\n", strerror(errno), r, libusb_error_name(r), len);
-        } else {
-            fprintf(stderr, "tared\n");
-        }
-    }
-
-    //
-    // For some reason, we get old data the first time, so let's just get that
-    // out of the way now. It can't hurt to grab another packet from the scale.
-    //
-    r = libusb_interrupt_transfer(
-        handle,
-        //bmRequestType => direction: in, type: class,
-                //    recipient: interface
-        LIBUSB_ENDPOINT_IN + 1,
-        data,
-        WEIGH_REPORT_SIZE, // length of data
-        &len,
-        10000 //timeout => 10 sec
-        );
-    //
-    // We read data from the scale in an infinite loop, stopping when
-    // **print_scale_data** tells us that it's successfully gotten the weight
-    // from the scale, or if the scale or transmissions indicates an error.
-    //
-    for(;;) {
         //
-        // A `libusb_interrupt_transfer` of 6 bytes from the scale is the
-        // typical scale data packet, and the usage is laid out in *HID Point
-        // of Sale Usage Tables*, version 1.02.
+        // Once we have a pointer to the USB scale in question, we open it.
+        //
+        r = libusb_open(dev, &handle);
+        //
+        // Note that this requires that we have permission to access this device.
+        // If you get the "permission denied" error, check your udev rules.
+        //
+        if(r < 0) {
+            if(r == LIBUSB_ERROR_ACCESS) {
+                fprintf(stderr, "Permission denied to scale.\n");
+            }
+            else if(r == LIBUSB_ERROR_NO_DEVICE) {
+                fprintf(stderr, "Scale has been disconnected.\n");
+            }
+            return -1;
+        }
+        //
+        // On Linux, we typically need to detach the kernel driver so that we can
+        // handle this USB device. We are a userspace tool, after all.
+        //
+    #ifdef __linux__
+        libusb_detach_kernel_driver(handle, 0);
+    #endif
+        //
+        // Finally, we can claim the interface to this device and begin I/O.
+        //
+        libusb_claim_interface(handle, 0);
+
+
+
+        /*
+        * Try to transfer data about status
+        *
+        * http://rowsandcolumns.blogspot.com/2011/02/read-from-magtek-card-swipe-reader-in.html
+        */
+        unsigned char data[WEIGH_REPORT_SIZE];
+        int len;
+        len = 0;
+        int scale_result = -1;
+
+        // lowest bit is Enforced Zero Return, second bit is Zero Scale
+        unsigned char tare_report[] = {0x02, 0x02};
+
+        if (argc > 1 && strncmp(argv[1], "zero", 5) == 0) {
+            r = libusb_interrupt_transfer(
+                handle,
+                LIBUSB_ENDPOINT_OUT + 2, // direction=host to device, type=standard, recipient=device
+                tare_report,
+                CONTROL_REPORT_SIZE,
+                &len,
+                10000
+                );
+
+            if (r != 0) {
+                fprintf(stderr, "errno=%s r=%d (%s) transferred %d bytes\n", strerror(errno), r, libusb_error_name(r), len);
+            } else {
+                fprintf(stderr, "tared\n");
+            }
+        }
+
+        //
+        // For some reason, we get old data the first time, so let's just get that
+        // out of the way now. It can't hurt to grab another packet from the scale.
         //
         r = libusb_interrupt_transfer(
             handle,
             //bmRequestType => direction: in, type: class,
                     //    recipient: interface
-            get_first_endpoint_address(dev),
+            LIBUSB_ENDPOINT_IN + 1,
             data,
             WEIGH_REPORT_SIZE, // length of data
             &len,
             10000 //timeout => 10 sec
             );
         //
-        // If the data transfer succeeded, then we pass along the data we
-        // received to **print_scale_data**.
+        // We read data from the scale in an infinite loop, stopping when
+        // **print_scale_data** tells us that it's successfully gotten the weight
+        // from the scale, or if the scale or transmissions indicates an error.
         //
-        if(r == 0) {
-#ifdef DEBUG
-            int i;
-            for(i = 0; i < WEIGH_REPORT_SIZE; i++) {
-                printf("%x\n", data[i]);
+        for(;;) {
+            //
+            // A `libusb_interrupt_transfer` of 6 bytes from the scale is the
+            // typical scale data packet, and the usage is laid out in *HID Point
+            // of Sale Usage Tables*, version 1.02.
+            //
+            r = libusb_interrupt_transfer(
+                handle,
+                //bmRequestType => direction: in, type: class,
+                        //    recipient: interface
+                get_first_endpoint_address(dev),
+                data,
+                WEIGH_REPORT_SIZE, // length of data
+                &len,
+                10000 //timeout => 10 sec
+                );
+            //
+            // If the data transfer succeeded, then we pass along the data we
+            // received to **print_scale_data**.
+            //
+            if(r == 0) {
+    #ifdef DEBUG
+                int i;
+                for(i = 0; i < WEIGH_REPORT_SIZE; i++) {
+                    printf("%x\n", data[i]);
+                }
+    #endif
+                if (weigh_count < 1) {
+                    scale_result = print_scale_data(data);
+                    if(scale_result != 1)
+                    break;
+                }
+                weigh_count--;
             }
-#endif
-            if (weigh_count < 1) {
-                scale_result = print_scale_data(data);
-                if(scale_result != 1)
-                   break;
+            else {
+                fprintf(stderr, "Error in USB transfer\n");
+                scale_result = -1;
+                break;
             }
-            weigh_count--;
         }
-        else {
-            fprintf(stderr, "Error in USB transfer\n");
-            scale_result = -1;
-            break;
+
+        //
+        // At the end, we make sure that we reattach the kernel driver that we
+        // detached earlier, close the handle to the device, free the device list
+        // that we retrieved, and exit libusb.
+        //
+    #ifdef __linux__
+        libusb_attach_kernel_driver(handle, 0);
+    #endif
+        libusb_close(handle);
+        libusb_free_device_list(devs, 1);
+        libusb_exit(NULL);
+
+        //
+        // The return code will be 0 for success or -1 for errors (see
+        // `libusb_init` above if it's neither 0 nor -1).
+        //
+        if (scale_result != 0) {
+            return scale_result;
         }
     }
-
     //
-    // At the end, we make sure that we reattach the kernel driver that we
-    // detached earlier, close the handle to the device, free the device list
-    // that we retrieved, and exit libusb.
+    // if no scales were found, make sure to show a message
     //
-#ifdef __linux__
-    libusb_attach_kernel_driver(handle, 0);
-#endif
-    libusb_close(handle);
-    libusb_free_device_list(devs, 1);
-    libusb_exit(NULL);
-
-    //
-    // The return code will be 0 for success or -1 for errors (see
-    // `libusb_init` above if it's neither 0 nor -1).
-    //
-    return scale_result;
+    if(!found_scale) {
+        fprintf(stderr, "No USB scale found on this computer.\n");
+        return -1;
+    }
+    return 0;
 }
 
 //
@@ -372,75 +388,65 @@ static int print_scale_data(unsigned char* dat) {
 }
 
 //
-// find_scale
+// is_scale
 // ----------
 //
-// **find_scale** takes a `libusb_device\*\*` list and loop through it,
+// **is_scale** takes a `libusb_device\*\*` list and loop through it,
 // matching each device's vendor and product IDs to the scales.h list. It
 // return the first matching `libusb_device\*` or 0 if no matching device is
 // found.
 //
-static libusb_device* find_scale(libusb_device **devs)
+static bool is_scale(libusb_device *dev)
 {
 
-    int i = 0;
-    libusb_device* dev = 0;
-
-    //
-    // Loop through each USB device, and for each device, loop through the
-    // scales list to see if it's one of our listed scales.
-    //
-    while ((dev = devs[i++]) != NULL) {
-        struct libusb_device_descriptor desc;
-        int r = libusb_get_device_descriptor(dev, &desc);
-        if (r < 0) {
-            fprintf(stderr, "failed to get device descriptor");
-            return NULL;
-        }
-        int i;
-        for (i = 0; i < NSCALES; i++) {
-            if(desc.idVendor  == scales[i][0] &&
-               desc.idProduct == scales[i][1]) {
-                /*
-                 * Debugging data about found scale
-                 */
+    struct libusb_device_descriptor desc;
+    int r = libusb_get_device_descriptor(dev, &desc);
+    if (r < 0) {
+        fprintf(stderr, "failed to get device descriptor");
+        return NULL;
+    }
+    int i;
+    for (i = 0; i < NSCALES; i++) {
+        if(desc.idVendor  == scales[i][0] &&
+            desc.idProduct == scales[i][1]) {
+            /*
+                * Debugging data about found scale
+                */
 #ifdef DEBUG
 
-                fprintf(stderr,
-                        "Found scale %04x:%04x (bus %d, device %d)\n",
-                        desc.idVendor,
-                        desc.idProduct,
-                        libusb_get_bus_number(dev),
-                        libusb_get_device_address(dev));
+            fprintf(stderr,
+                    "Found scale %04x:%04x (bus %d, device %d)\n",
+                    desc.idVendor,
+                    desc.idProduct,
+                    libusb_get_bus_number(dev),
+                    libusb_get_device_address(dev));
 
-                    fprintf(stderr,
-                            "It has descriptors:\n\tmanufc: %d\n\tprodct: %d\n\tserial: %d\n\tclass: %d\n\tsubclass: %d\n",
-                            desc.iManufacturer,
-                            desc.iProduct,
-                            desc.iSerialNumber,
-                            desc.bDeviceClass,
-                            desc.bDeviceSubClass);
+            fprintf(stderr,
+                    "It has descriptors:\n\tmanufc: %d\n\tprodct: %d\n\tserial: %d\n\tclass: %d\n\tsubclass: %d\n",
+                    desc.iManufacturer,
+                    desc.iProduct,
+                    desc.iSerialNumber,
+                    desc.bDeviceClass,
+                    desc.bDeviceSubClass);
 
-                    /*
-                     * A char buffer to pull string descriptors in from the device
-                     */
-                    unsigned char string[256];
-                    libusb_device_handle* hand;
-                    libusb_open(dev, &hand);
+            /*
+                * A char buffer to pull string descriptors in from the device
+                */
+            unsigned char string[256];
+            libusb_device_handle* hand;
+            libusb_open(dev, &hand);
 
-                    r = libusb_get_string_descriptor_ascii(hand, desc.iManufacturer,
-                            string, 256);
-                    fprintf(stderr,
-                            "Manufacturer: %s\n", string);
-                    libusb_close(hand);
+            r = libusb_get_string_descriptor_ascii(hand, desc.iManufacturer,
+                    string, 256);
+            fprintf(stderr,
+                    "Manufacturer: %s\n", string);
+            libusb_close(hand);
 #endif
-                    return dev;
-
-                break;
-            }
+            return true;
+            break;
         }
     }
-    return NULL;
+    return false;
 }
 
 uint8_t get_first_endpoint_address(libusb_device* dev)

@@ -1,5 +1,5 @@
 LDLIBS=-lm -lusb-1.0
-CFLAGS=-Os -Wall
+CFLAGS=-Os -Wall -Wextra
 DOCCO=docco
 
 usbscale: usbscale.c scales.h
