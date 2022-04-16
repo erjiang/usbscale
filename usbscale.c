@@ -75,7 +75,7 @@ uint8_t get_first_endpoint_address(libusb_device* dev);
 // Point of Sale Usage Tables*, version 1.02, by the USB Implementers' Forum.
 // The list is laid out so that the unit code returned by the scale is the
 // index of its corresponding string.
-// 
+//
 const char* UNITS[13] = {
     "units",        // unknown unit
     "mg",           // milligram
@@ -110,7 +110,7 @@ int main(int argc, char **argv)
     // We first try to init libusb.
     //
     r = libusb_init(NULL);
-    // 
+    //
     // If `libusb_init` errored, then we quit immediately.
     //
     if (r < 0)
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "No USB scale found on this computer.\n");
         return -1;
     }
-    
+
     //
     // Once we have a pointer to the USB scale in question, we open it.
     //
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "tared\n");
         }
     }
-    
+
     //
     // For some reason, we get old data the first time, so let's just get that
     // out of the way now. It can't hurt to grab another packet from the scale.
@@ -212,7 +212,7 @@ int main(int argc, char **argv)
         &len,
         10000 //timeout => 10 sec
         );
-    // 
+    //
     // We read data from the scale in an infinite loop, stopping when
     // **print_scale_data** tells us that it's successfully gotten the weight
     // from the scale, or if the scale or transmissions indicates an error.
@@ -233,7 +233,7 @@ int main(int argc, char **argv)
             &len,
             10000 //timeout => 10 sec
             );
-        // 
+        //
         // If the data transfer succeeded, then we pass along the data we
         // received to **print_scale_data**.
         //
@@ -257,8 +257,8 @@ int main(int argc, char **argv)
             break;
         }
     }
-    
-    // 
+
+    //
     // At the end, we make sure that we reattach the kernel driver that we
     // detached earlier, close the handle to the device, free the device list
     // that we retrieved, and exit libusb.
@@ -270,10 +270,10 @@ int main(int argc, char **argv)
     libusb_free_device_list(devs, 1);
     libusb_exit(NULL);
 
-    // 
+    //
     // The return code will be 0 for success or -1 for errors (see
     // `libusb_init` above if it's neither 0 nor -1).
-    // 
+    //
     return scale_result;
 }
 
@@ -291,11 +291,11 @@ int main(int argc, char **argv)
 //
 static int print_scale_data(unsigned char* dat) {
 
-    // 
+    //
     // We keep around `lastStatus` so that we're not constantly printing the
     // same status message while waiting for a weighing. If the status hasn't
     // changed from last time, **print_scale_data** prints nothing.
-    // 
+    //
     static uint8_t lastStatus = 0;
 
     //
@@ -366,7 +366,7 @@ static int print_scale_data(unsigned char* dat) {
                 fprintf(stderr, "Unknown status code: %d\n", status);
             return -1;
     }
-    
+
     lastStatus = status;
     return 1;
 }
@@ -374,7 +374,7 @@ static int print_scale_data(unsigned char* dat) {
 //
 // find_scale
 // ----------
-// 
+//
 // **find_scale** takes a `libusb_device\*\*` list and loop through it,
 // matching each device's vendor and product IDs to the scales.h list. It
 // return the first matching `libusb_device\*` or 0 if no matching device is
@@ -399,7 +399,7 @@ static libusb_device* find_scale(libusb_device **devs)
         }
         int i;
         for (i = 0; i < NSCALES; i++) {
-            if(desc.idVendor  == scales[i][0] && 
+            if(desc.idVendor  == scales[i][0] &&
                desc.idProduct == scales[i][1]) {
                 /*
                  * Debugging data about found scale
@@ -435,7 +435,7 @@ static libusb_device* find_scale(libusb_device **devs)
                     libusb_close(hand);
 #endif
                     return dev;
-                    
+
                 break;
             }
         }
