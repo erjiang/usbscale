@@ -34,6 +34,7 @@ uint16_t scales[NSCALES][2] = {\
     {0x2474, 0x3550},
     // Mettler Toledo
     {0x0eb8, 0xf000},
+    {0x0eb8, 0xf001},    
     // SANFORD Dymo 10 lb USB Postal Scale
     {0x6096, 0x0158},
     // Fairbanks Scales SCB-R9000
