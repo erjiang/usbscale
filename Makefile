@@ -5,8 +5,6 @@ DOCCO=docco
 usbscale: usbscale.c scales.h
 	$(CC) $(CFLAGS) $< $(LDLIBS) -o $@
 
-lsusb: lsusb.c scales.h
-
 docs: usbscale.c
 	$(DOCCO) usbscale.c
 
