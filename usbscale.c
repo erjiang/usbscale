@@ -53,6 +53,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define WEIGH_REPORT_SIZE 6
 #define CONTROL_REPORT_SIZE 2
 
+// `le16toh` is not available on MacOS (as of 12.6) but we can replace it with
+// a similar function.
+#if defined(__APPLE__)
+  #include <libkern/OSByteOrder.h>
+  #define le16toh(x) OSSwapLittleToHostInt16(x)
+#endif
+
 //
 // **find_scale** takes a libusb device list and finds the first USB device
 // that matches a device listed in scales.h.
