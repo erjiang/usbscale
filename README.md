@@ -59,6 +59,6 @@ Contact
 
 If you have a code-related issue (bugs, patches, etc.), then you can create an
 issue on the [usbscale Github repo][]. Otherwise, the best way to contact me is
-by sending mail to erjiang at indiana.edu.
+by sending mail to erjiang at alumni-iu-edu.
 
   [usbscale Github repo]: https://github.com/erjiang/usbscale
