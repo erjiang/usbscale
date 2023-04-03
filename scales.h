@@ -10,11 +10,6 @@
 #include <stdint.h>
 
 //
-// **NSCALES** should be kept updated with the length of the list.
-//
-#define NSCALES 13
-
-//
 // What is the number of the weighing result to show, as the first result may be incorrect (from the previous weighing)
 //
 #define WEIGH_COUNT 2
@@ -23,7 +18,7 @@
 // Scales
 // ------
 //
-uint16_t scales[NSCALES][2] = {\
+uint16_t scales[][2] = {\
     // Stamps.com Model 510 5LB Scale
     {0x1446, 0x6a73},
     // USPS (Elane) PS311 "XM Elane Elane UParcel 30lb"
@@ -52,3 +47,5 @@ uint16_t scales[NSCALES][2] = {\
     //   mine did at first but now it's behaving itself
     {0x1446, 0x6a79}
 };
+
+#define NSCALES ((sizeof scales)/(sizeof scales[0]))
