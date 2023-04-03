@@ -312,7 +312,7 @@ static int print_scale_data(unsigned char* dat) {
     uint8_t report = dat[0];
     uint8_t status = dat[1];
     uint8_t unit   = dat[2];
-    // Accoring to the docs, scaling applied to the data as a base ten exponent
+    // According to the docs, scaling applied to the data as a base ten exponent
     int8_t  expt   = dat[3];
     // convert to machine order at all times
     double weight = (double) le16toh(dat[5] << 8 | dat[4]);
