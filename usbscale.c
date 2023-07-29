@@ -10,7 +10,7 @@
 //
 /*
 usbscale
-Copyright (C) 2011 Eric Jiang
+Copyright (C) 2011--2023 Eric Jiang
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,12 +25,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <stdio.h>
-#include <sys/types.h>
-#include <stdint.h>
-#include <math.h>
+#include <argp.h>
 #include <errno.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 
 //
 // This program uses libusb-1.0 (not the older libusb-0.1) for USB
@@ -64,7 +67,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // **find_scale** takes a libusb device list and finds the first USB device
 // that matches a device listed in scales.h.
 //
-static libusb_device* find_scale(libusb_device**);
+static libusb_device* find_nth_scale(libusb_device**, int);
 //
 // **print_scale_data** takes the 6-byte output from the scale and interprets
 // it, printing out the result to the screen. It also returns a 1 if the
@@ -77,12 +80,16 @@ static int print_scale_data(unsigned char*);
 //
 uint8_t get_first_endpoint_address(libusb_device* dev);
 
+// **is_scale** checks if the given USB vendor and product IDs are a known scale
+// (as defined in scales.h)
+bool is_scale(uint16_t idVendor, uint16_t idProduct);
+
 //
 // **UNITS** is an array of all the unit abbreviations as set forth by *HID
 // Point of Sale Usage Tables*, version 1.02, by the USB Implementers' Forum.
 // The list is laid out so that the unit code returned by the scale is the
 // index of its corresponding string.
-// 
+//
 const char* UNITS[13] = {
     "units",        // unknown unit
     "mg",           // milligram
@@ -99,25 +106,77 @@ const char* UNITS[13] = {
     "lbs"           // pound
 };
 
+// Setup argument parsing
+const char *argp_program_version = "usbscale 0.2";
+const char *argp_program_bug_address = "<https://www.github.com/erjiang/usbscale/issues>";
+static char doc[] = "Read weight from a USB scale\n"
+"The `tare' command will request the scale to reset to zero (not supported by all scales).\n";
+static char args_doc[] = "[zero]";
+static struct argp_option options[] = {
+    { "index", 'i', "INDEX", 0, "Index of scale to read (default: 1)" },
+    { 0 }
+};
+
+// setup argp to get index
+struct arguments {
+    int index;
+    bool tare;
+};
+
+static error_t parse_opt(int key, char *arg, struct argp_state *state) {
+    struct arguments *arguments = state->input;
+    switch (key) {
+        case 'i':
+            arguments->index = atoi(arg);
+            // Make sure index is >0 since the first scale has index 1.
+            if (arguments->index < 1) {
+                argp_usage(state);
+            }
+            break;
+        case ARGP_KEY_ARG:
+            if (strcmp(arg, "zero") == 0) {
+                arguments->tare = true;
+            } else {
+                argp_usage(state);
+            }
+            break;
+        case ARGP_KEY_END:
+            return 0;
+        default:
+            return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
+
+static struct argp argp = { options, parse_opt, args_doc, doc };
+
 //
 // main
 // ----
 //
 int main(int argc, char **argv)
 {
+
+    // Parse arguments
+    struct arguments arguments;
+    // By default, get the first scale's weight
+    arguments.index = 1;
+    arguments.tare = false;
+    argp_parse(&argp, argc, argv, 0, 0, &arguments);
+
     libusb_device **devs;
     int r; // holds return codes
     ssize_t cnt;
     libusb_device* dev;
     libusb_device_handle* handle;
 
-    int weigh_count = WEIGH_COUNT -1;
+    int weigh_count = WEIGH_COUNT - 1;
 
     //
     // We first try to init libusb.
     //
     r = libusb_init(NULL);
-    // 
+    //
     // If `libusb_init` errored, then we quit immediately.
     //
     if (r < 0)
@@ -138,12 +197,15 @@ int main(int argc, char **argv)
     // every device against the scales.h list. **find_scale** will return the
     // first device that matches, or 0 if none of them matched.
     //
-    dev = find_scale(devs);
+    dev = find_nth_scale(devs, arguments.index);
     if(dev == 0) {
-        fprintf(stderr, "No USB scale found on this computer.\n");
+        if (arguments.index > 1)
+            fprintf(stderr, "No scale with index %d found on this computer.\n", arguments.index);
+        else
+            fprintf(stderr, "No USB scale found on this computer.\n");
         return -1;
     }
-    
+
     //
     // Once we have a pointer to the USB scale in question, we open it.
     //
@@ -188,7 +250,7 @@ int main(int argc, char **argv)
     // lowest bit is Enforced Zero Return, second bit is Zero Scale
     unsigned char tare_report[] = {0x02, 0x02};
 
-    if (argc > 1 && strncmp(argv[1], "zero", 5) == 0) {
+    if (arguments.tare) {
         r = libusb_interrupt_transfer(
             handle,
             LIBUSB_ENDPOINT_OUT + 2, // direction=host to device, type=standard, recipient=device
@@ -204,7 +266,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "tared\n");
         }
     }
-    
+
     //
     // For some reason, we get old data the first time, so let's just get that
     // out of the way now. It can't hurt to grab another packet from the scale.
@@ -219,7 +281,7 @@ int main(int argc, char **argv)
         &len,
         10000 //timeout => 10 sec
         );
-    // 
+    //
     // We read data from the scale in an infinite loop, stopping when
     // **print_scale_data** tells us that it's successfully gotten the weight
     // from the scale, or if the scale or transmissions indicates an error.
@@ -240,7 +302,7 @@ int main(int argc, char **argv)
             &len,
             10000 //timeout => 10 sec
             );
-        // 
+        //
         // If the data transfer succeeded, then we pass along the data we
         // received to **print_scale_data**.
         //
@@ -381,23 +443,31 @@ static int print_scale_data(unsigned char* dat) {
 //
 // find_scale
 // ----------
-// 
+//
 // **find_scale** takes a `libusb_device\*\*` list and loop through it,
 // matching each device's vendor and product IDs to the scales.h list. It
 // return the first matching `libusb_device\*` or 0 if no matching device is
 // found.
 //
-static libusb_device* find_scale(libusb_device **devs)
+static libusb_device* find_nth_scale(libusb_device **devs, int index)
 {
 
     int i = 0;
+    // **curr_index** counts the index of each scale, in order to find the nth
+    // scale as specified by **index**. Counting is 1-based, so the first scale
+    // has index 1.
+    int curr_index = 0;
     libusb_device* dev = 0;
+    // Since each device shows up multiple times in **devs**, skip the device if
+    // the address is the same as the previous entry.
+    uint16_t last_device_address = 0;
 
     //
     // Loop through each USB device, and for each device, loop through the
     // scales list to see if it's one of our listed scales.
     //
     while ((dev = devs[i++]) != NULL) {
+
         struct libusb_device_descriptor desc;
         int r = libusb_get_device_descriptor(dev, &desc);
         if (r < 0) {
@@ -406,13 +476,18 @@ static libusb_device* find_scale(libusb_device **devs)
         }
         int i;
         for (i = 0; i < NSCALES; i++) {
-            if(desc.idVendor  == scales[i][0] && 
-               desc.idProduct == scales[i][1]) {
+            if (is_scale(desc.idVendor, desc.idProduct)) {
+
+                // Skip this device if it's the same as the last one.
+                uint16_t this_device_address = (libusb_get_bus_number(dev) << 8) + libusb_get_device_address(dev);
+                if(this_device_address == last_device_address) {
+                    continue;
+                }
+                last_device_address = this_device_address;
+#ifdef DEBUG
                 /*
                  * Debugging data about found scale
                  */
-#ifdef DEBUG
-
                 fprintf(stderr,
                         "Found scale %04x:%04x (bus %d, device %d)\n",
                         desc.idVendor,
@@ -420,34 +495,47 @@ static libusb_device* find_scale(libusb_device **devs)
                         libusb_get_bus_number(dev),
                         libusb_get_device_address(dev));
 
-                    fprintf(stderr,
-                            "It has descriptors:\n\tmanufc: %d\n\tprodct: %d\n\tserial: %d\n\tclass: %d\n\tsubclass: %d\n",
-                            desc.iManufacturer,
-                            desc.iProduct,
-                            desc.iSerialNumber,
-                            desc.bDeviceClass,
-                            desc.bDeviceSubClass);
+                fprintf(stderr,
+                        "It has descriptors:\n\tmanufc: %d\n\tprodct: %d\n\tserial: %d\n\tclass: %d\n\tsubclass: %d\n",
+                        desc.iManufacturer,
+                        desc.iProduct,
+                        desc.iSerialNumber,
+                        desc.bDeviceClass,
+                        desc.bDeviceSubClass);
 
-                    /*
-                     * A char buffer to pull string descriptors in from the device
-                     */
-                    unsigned char string[256];
-                    libusb_device_handle* hand;
-                    libusb_open(dev, &hand);
+                /*
+                    * A char buffer to pull string descriptors in from the device
+                    */
+                unsigned char string[256];
+                libusb_device_handle* hand;
+                libusb_open(dev, &hand);
 
-                    r = libusb_get_string_descriptor_ascii(hand, desc.iManufacturer,
-                            string, 256);
-                    fprintf(stderr,
-                            "Manufacturer: %s\n", string);
-                    libusb_close(hand);
+                r = libusb_get_string_descriptor_ascii(hand, desc.iManufacturer,
+                        string, 256);
+                fprintf(stderr,
+                        "Manufacturer: %s\n", string);
+                libusb_close(hand);
 #endif
+                curr_index++;
+                if (curr_index == index) {
                     return dev;
-                    
-                break;
+                }
             }
         }
     }
     return NULL;
+}
+
+// **is_scale** loops through the scales list to see if the given vendor and
+// product ID match any of the known USB scales.
+bool is_scale(uint16_t idVendor, uint16_t idProduct) {
+    int i;
+    for (i = 0; i < NSCALES; i++) {
+        if(idVendor  == scales[i][0] && idProduct == scales[i][1]) {
+            return true;
+        }
+    }
+    return false;
 }
 
 uint8_t get_first_endpoint_address(libusb_device* dev)
