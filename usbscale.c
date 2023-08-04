@@ -77,6 +77,9 @@ static int print_scale_data(unsigned char*);
 //
 uint8_t get_first_endpoint_address(libusb_device* dev);
 
+
+
+
 //
 // **UNITS** is an array of all the unit abbreviations as set forth by *HID
 // Point of Sale Usage Tables*, version 1.02, by the USB Implementers' Forum.
@@ -350,7 +353,13 @@ static int print_scale_data(unsigned char* dat) {
         // the `UNITS` lookup table for unit names.
         //
         case 0x04:
-            printf("%g %s\n", weight, UNITS[unit]);
+            if(unit == 11) {
+                // stamps.com scale, defult "oz" unit
+                int lbs = weight / 16;
+                double remain = weight - lbs * 16;
+                printf("%g oz (%d lbs %g oz), %g grams\n", weight, lbs, remain, weight * 28.3495);
+            } else
+                printf("%g %s\n", weight, UNITS[unit]);
             return 0;
         case 0x05:
             if(status != lastStatus)
