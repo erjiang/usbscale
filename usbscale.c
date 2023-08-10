@@ -110,7 +110,7 @@ const char* UNITS[13] = {
 const char *argp_program_version = "usbscale 0.2";
 const char *argp_program_bug_address = "<https://www.github.com/erjiang/usbscale/issues>";
 static char doc[] = "Read weight from a USB scale\n"
-"The `tare' command will request the scale to reset to zero (not supported by all scales).\n";
+"The `zero' command will request the scale to reset to zero (not supported by all scales).\n";
 static char args_doc[] = "[zero]";
 static struct argp_option options[] = {
     { "index", 'i', "INDEX", 0, "Index of scale to read (default: 1)" },
