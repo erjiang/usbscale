@@ -463,8 +463,8 @@ static libusb_device* find_nth_scale(libusb_device **devs, int index)
     uint16_t last_device_address = 0;
 
     //
-    // Loop through each USB device, and for each device, loop through the
-    // scales list to see if it's one of our listed scales.
+    // Loop through each USB device and check if it's one of the
+    // supported scales listed in scales.h.
     //
     while ((dev = devs[i++]) != NULL) {
 
@@ -474,9 +474,7 @@ static libusb_device* find_nth_scale(libusb_device **devs, int index)
             fprintf(stderr, "failed to get device descriptor");
             return NULL;
         }
-        int i;
-        for (i = 0; i < NSCALES; i++) {
-            if (is_scale(desc.idVendor, desc.idProduct)) {
+        if (is_scale(desc.idVendor, desc.idProduct)) {
 
                 // Skip this device if it's the same as the last one.
                 uint16_t this_device_address = (libusb_get_bus_number(dev) << 8) + libusb_get_device_address(dev);
@@ -520,7 +518,6 @@ static libusb_device* find_nth_scale(libusb_device **devs, int index)
                 if (curr_index == index) {
                     return dev;
                 }
-            }
         }
     }
     return NULL;
