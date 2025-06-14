@@ -73,7 +73,7 @@ static libusb_device* find_nth_scale(libusb_device**, int);
 // it, printing out the result to the screen. It also returns a 1 if the
 // program should read again (i.e. continue looping).
 //
-static int print_scale_data(unsigned char*);
+static int print_scale_data(unsigned char*, bool);
 
 //
 // take device and fetch bEndpointAddress for the first endpoint
@@ -107,13 +107,14 @@ const char* UNITS[13] = {
 };
 
 // Setup argument parsing
-const char *argp_program_version = "usbscale 0.2";
+const char *argp_program_version = "usbscale 0.3";
 const char *argp_program_bug_address = "<https://www.github.com/erjiang/usbscale/issues>";
 static char doc[] = "Read weight from a USB scale\n"
 "The `zero' command will request the scale to reset to zero (not supported by all scales).\n";
 static char args_doc[] = "[zero]";
 static struct argp_option options[] = {
     { "index", 'i', "INDEX", 0, "Index of scale to read (default: 1)" },
+    { "human", 'h', 0, 0, "Print weight in lbs and oz when units are oz" },
     { 0 }
 };
 
@@ -121,6 +122,7 @@ static struct argp_option options[] = {
 struct arguments {
     int index;
     bool tare;
+    bool human;
 };
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state) {
@@ -132,6 +134,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             if (arguments->index < 1) {
                 argp_usage(state);
             }
+            break;
+        case 'h':
+            arguments->human = true;
             break;
         case ARGP_KEY_ARG:
             if (strcmp(arg, "zero") == 0) {
@@ -162,6 +167,7 @@ int main(int argc, char **argv)
     // By default, get the first scale's weight
     arguments.index = 1;
     arguments.tare = false;
+    arguments.human = false;
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
     libusb_device **devs;
@@ -314,7 +320,7 @@ int main(int argc, char **argv)
             }
 #endif
             if (weigh_count < 1) {
-                scale_result = print_scale_data(data);
+                scale_result = print_scale_data(data, arguments.human);
                 if(scale_result != 1)
                    break;
             }
@@ -351,14 +357,15 @@ int main(int argc, char **argv)
 // ----------------
 //
 // **print_scale_data** takes the 6 bytes of binary data sent by the scale and
-// interprets and prints it out.
+// interprets and prints it out. If `human` is true and the units are ounces,
+// it will output the weight as pounds and ounces.
 //
 // **Returns:** `0` if weight data was successfully read, `1` if the data
 // indicates that more data needs to be read (i.e. keep looping), and `-1` if
 // the scale data indicates that some error occurred and that the program
 // should terminate.
 //
-static int print_scale_data(unsigned char* dat) {
+static int print_scale_data(unsigned char* dat, bool human) {
 
     //
     // We keep around `lastStatus` so that we're not constantly printing the
@@ -414,7 +421,13 @@ static int print_scale_data(unsigned char* dat) {
         // the `UNITS` lookup table for unit names.
         //
         case 0x04:
-            printf("%g %s\n", weight, UNITS[unit]);
+            if (human && unit == 11) {
+                int lbs = (int)floor(weight / 16.0);
+                double oz = weight - (lbs * 16.0);
+                printf("%d lbs %g oz\n", lbs, oz);
+            } else {
+                printf("%g %s\n", weight, UNITS[unit]);
+            }
             return 0;
         case 0x05:
             if(status != lastStatus)
