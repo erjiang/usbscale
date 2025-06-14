@@ -24,6 +24,9 @@ error messages will be sent to `stderr`. An exit code of 0 means that a scale
 was found and a weight was successfully read. Any other error code indicates
 that a weight reading was unavailable.
 
+Use the `-h`/`--human` flag to format ounce measurements as pounds and
+ounces, e.g. `1 lbs 4 oz` instead of `20 oz`.
+
 ## Zeroing the scale
 
 There is somewhat-experimental support for sending a tare command to the scale.
