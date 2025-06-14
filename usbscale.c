@@ -376,8 +376,10 @@ static int print_scale_data(unsigned char* dat) {
     uint8_t unit   = dat[2];
     // According to the docs, scaling applied to the data as a base ten exponent
     int8_t  expt   = dat[3];
-    // convert to machine order at all times
-    double weight = (double) le16toh(dat[5] << 8 | dat[4]);
+    // combine the little-endian weight bytes without relying on system
+    // endianness. dat[4] is the low byte and dat[5] is the high byte.
+    uint16_t raw_weight = (uint16_t)dat[4] | ((uint16_t)dat[5] << 8);
+    double weight = (double)raw_weight;
     // since the expt is signed, we do not need no trickery
     weight = weight * pow(10, expt);
 
