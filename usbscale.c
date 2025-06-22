@@ -254,20 +254,21 @@ int main(int argc, char **argv)
     int scale_result = -1;
 
     // lowest bit is Enforced Zero Return, second bit is Zero Scale
-    unsigned char tare_report[] = {0x02, 0x02};
-
+    // Send zero command via HID feature report 0x02 with a single byte 0x03.
     if (arguments.tare) {
-        r = libusb_interrupt_transfer(
+        unsigned char tare_report[] = {0x03};
+        r = libusb_control_transfer(
             handle,
-            LIBUSB_ENDPOINT_OUT + 2, // direction=host to device, type=standard, recipient=device
+            LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE,
+            0x09,                     // HID Set_Report
+            (3 << 8) | 0x02,          // Feature report ID 0x02
+            0,                        // interface
             tare_report,
-            CONTROL_REPORT_SIZE,
-            &len,
-            10000
-            );
+            sizeof(tare_report),
+            1000);
 
-        if (r != 0) {
-            fprintf(stderr, "errno=%s r=%d (%s) transferred %d bytes\n", strerror(errno), r, libusb_error_name(r), len);
+        if (r < 0) {
+            fprintf(stderr, "zero command failed: errno=%s r=%d (%s)\n", strerror(errno), r, libusb_error_name(r));
         } else {
             fprintf(stderr, "tared\n");
         }
